@@ -2,7 +2,7 @@ from flask import jsonify, request, g, url_for, current_app
 from .. import db
 from ..models import Hitman
 from . import api
-from ..responses import bad_request, success, not_found, conflict, system_error
+from ..responses import bad_request, success, not_found, conflict, system_error, forbidden
 from ..exceptions import ValidationError, NotFoundError, WrongPasswordError, ForbiddenError, InvalidChangeError
 from sqlalchemy import exc
 from flask_cors import cross_origin
@@ -33,8 +33,8 @@ def register():
 def login():
     try:
         print("Login info", request.get_json())
-        token = Hitman.login(request.json)
-        return success(token, 200)
+        response = Hitman.login(request.json)
+        return success(response, 200)
     except ValidationError as ve:
         return bad_request(str(ve))
     except exc.IntegrityError as ie:
@@ -61,7 +61,6 @@ def patch_hitman(hitman_uuid):
             db.session.add(hitman)
             db.session.commit()
             return success(hitman.to_json(), 200)
-
         else:
             return bad_request("A token is needed for authentication")
     except InvalidChangeError as ic:
@@ -84,9 +83,30 @@ def get_hitmen():
         if(token):
             token = token.split()[1]
             hitmen = Hitman.get_hitmen(token)
-            return "yei"
+            return success(hitmen, 200)
         else:
             return bad_request("A token is needed for authentication")
+    except ForbiddenError as wp:
+        return forbidden("You do not have the needed permissions")
+    except Exception as e:
+        if("400" in str(e)):
+            return bad_request("Invalid PATCH request. Please remember to include the body")
+        return system_error(str(e))
+
+
+@api.route('/hitmen/<hitman_uuid>')
+@cross_origin()
+def get_hitman(hitman_uuid):
+    try:
+        token = dict(request.headers).get('Authorization')
+        if(token):
+            token = token.split()[1]
+            hitman = Hitman.get_hitman(token, hitman_uuid)
+            return success(hitman, 200)
+        else:
+            return bad_request("A token is needed for authentication")
+    except NotFoundError as nf:
+        return not_found(str(nf))
     except ForbiddenError as wp:
         return forbidden("You do not have the needed permissions")
     except Exception as e:

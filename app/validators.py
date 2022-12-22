@@ -19,6 +19,7 @@ COMPANY_POST_SCHEMA = {
         "description",
         "symbol",
     ],
+    "additionalProperties": False
 }
 
 
@@ -32,6 +33,7 @@ COMPANY_PUT_SCHEMA = {
             "pattern": "(NYSE|AMEX|NASDAQ):([A-Z]{1,4})"
         },
     },
+    "additionalProperties": False
 }
 
 
@@ -53,6 +55,7 @@ HITMAN_POST_SCHEMA = {
         "email",
         "password",
     ],
+    "additionalProperties": False
 }
 
 
@@ -71,6 +74,7 @@ HITMAN_PATCH_SCHEMA = {
             ]},
         "manager_uuid": {"type": "string", "minLength": 36,"maxLength": 36,"format": "uuid", "pattern": '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'},
     },
+    "additionalProperties": False
 }
 
 
@@ -85,6 +89,7 @@ HITMAN_LOGIN_SCHEMA = {
         "email",
         "password",
     ],
+    "additionalProperties": False
 }
 
 
@@ -105,6 +110,35 @@ HIT_POST_SCHEMA = {
         "target_lastname_1",
         "hitman_uuid"
     ],
+    "additionalProperties": False
+}
+
+HIT_PATCH_BY_HITMAN_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "status": {"type": "string", "minLength": 2, "maxLength": 20,
+            "enum": [
+                "assigned",
+                "completed",
+                "failed"
+            ]},
+    },
+    "additionalProperties": False
+}
+
+
+HIT_PATCH_BY_MANAGER_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "hitman_uuid": {"type": "string", "minLength": 36,"maxLength": 36,"format": "uuid", "pattern": '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'},
+        "status": {"type": "string", "minLength": 2, "maxLength": 20,
+            "enum": [
+                "assigned",
+                "completed",
+                "failed"
+            ]},
+    },
+    "additionalProperties": False
 }
 
 
@@ -137,4 +171,13 @@ def validate_create_hit(json_data):
 
 def validate_patch_hitman(json_data):
     return validate_json(json_data, HITMAN_PATCH_SCHEMA)
+
+
+def validate_patch_hit_by_hitman(json_data):
+    return validate_json(json_data, HIT_PATCH_BY_HITMAN_SCHEMA)
+
+
+def validate_patch_hit_by_manager(json_data):
+    return validate_json(json_data, HIT_PATCH_BY_MANAGER_SCHEMA)
+
 

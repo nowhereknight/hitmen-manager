@@ -5,7 +5,7 @@ import bcrypt
 import jwt
 from flask import current_app, request, url_for
 from . import db
-from .validators import validate_post_hitman, validate_login, validate_create_hit, validate_patch_hitman
+from .validators import validate_post_hitman, validate_login, validate_create_hit, validate_patch_hit_by_manager, validate_patch_hit_by_hitman
 from .exceptions import ValidationError, NotFoundError, WrongPasswordError, NotAllowedError, ForbiddenError, InvalidChangeError
 from .utils import password_check
 
@@ -132,7 +132,7 @@ class Hitman(db.Model):
                         key=SECRET_KEY,
                         algorithm="HS256"
                     )
-                    return token
+                    return {"token":token, "hitman":hitman.to_json()}
                 else:
                     raise WrongPasswordError()
             raise NotFoundError()
@@ -145,16 +145,49 @@ class Hitman(db.Model):
             raise ForbiddenError()
         elif(decoded.get('rank') == 'manager'):
             hitmen = Hitman.query.filter_by(manager_uuid=decoded.get('hitman_uuid')).all()
-            print(hitmen)
+            response = {
+                "asignees": [hitman.to_json().get('hitman_uuid') for hitman in hitmen]
+            }
+            return response
+        elif(decoded.get('rank') == 'god'):
+            hitmen = Hitman.query.all()
+            response = {
+                "all_hitmen": [ 
+                    { 
+                        'hitman_uuid' : hitman.to_json().get('hitman_uuid'),
+                        'name' : hitman.to_json().get('name'),
+                        'lastname_1' : hitman.to_json().get('lastname_1'),
+                        'status' : hitman.to_json().get('status'),
+                        'rank' : hitman.to_json().get('rank'),
+
+                    } for hitman in hitmen
+                ]
+            }
+            return response
+
+
+    @staticmethod
+    def get_hitman(token, hitman_uuid):
+        decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        if(decoded.get('rank') == 'hitman'):
+            raise ForbiddenError()    
+        elif(decoded.get('rank') == 'manager'):
+            hitman = Hitman.query.filter_by(hitman_uuid=hitman_uuid, manager_uuid=decoded.get('hitman_uuid')).first()
+            if(not hitman):
+                raise NotFoundError("No hitman with given hitman_uuid and/or assigned to the manager found")
+            return hitman.to_json()
+        elif(decoded.get('rank') == 'god'):
+            hitman = Hitman.query.filter_by(hitman_uuid=hitman_uuid).first()
+            if(not hitman):
+                raise NotFoundError("No hitman with given hitman_uuid found")
+            return hitman.to_json()
 
 
     @staticmethod
     def patch_hitman(token, hitman_uuid, body):
-
         decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
         if(decoded.get('rank') != "god"):
             raise ForbiddenError()
-
         if body is None or body == '':
             raise ValidationError('Request does not have a body')
         validation = validate_patch_hitman(body)
@@ -202,10 +235,9 @@ class Hitman(db.Model):
             'email': self.email,
             'status': self.status,
             'rank': self.rank,
-            'manager_uuid': self.manager_uuid,
+            'manager_uuid': str(self.manager_uuid),
         }
         if(self.hitman_uuid):
-            #print("self.hitman_uuid", self.hitman_uuid)
             json_hitman['hitman_uuid'] = str(self.hitman_uuid)
 
         return json_hitman
@@ -244,7 +276,18 @@ class Hit(db.Model):
             return {
                 "hits":[hit.to_json().get('hit_uuid') for hit in hits]
             }
-        ### Manager
+        elif(decoded.get('rank') == 'manager'):
+            hits_hitmen = db.session.query(Hit, Hitman).filter(Hit.hitman_uuid == Hitman.hitman_uuid).filter(Hitman.manager_uuid == decoded.get('hitman_uuid')).all()
+            print(hits_hitmen)
+            asignees = {}
+            for hit_hitman in hits_hitmen:
+                hit = hit_hitman[0]
+                hitman_uuid = str(hit_hitman[1].to_json().get('hitman_uuid'))
+                if asignees.get(hitman_uuid):
+                    asignees[hitman_uuid].append(hit.to_json())
+                else:
+                    asignees[hitman_uuid] = [ hit.to_json()]
+            return {"asignees":asignees}
         elif(decoded.get('rank') == 'god'):
             results = {}
             hitmen = Hitman.query.all()
@@ -268,13 +311,16 @@ class Hit(db.Model):
             if(not hit):
                 raise NotFoundError()
             return hit
-        ### Manager
+        elif(decoded.get('rank') == 'manager'):
+            hit_hitman = db.session.query(Hit, Hitman).filter(Hit.hitman_uuid == Hitman.hitman_uuid).filter(Hitman.manager_uuid == decoded.get('hitman_uuid')).filter(Hit.hit_uuid == hit_uuid).first()
+            if(not hit_hitman):
+                raise NotFoundError()
+            return hit_hitman[0]
         elif(decoded.get('rank') == 'god'):
             hit = Hit.query.filter_by(hit_uuid=hit_uuid).first()
             if(not hit):
                 raise NotFoundError()
             return hit
-
 
 
     @staticmethod
@@ -297,8 +343,61 @@ class Hit(db.Model):
                 return Hit(body)
         else:
             raise NotAllowedError()
-    
-    
+ 
+
+    @staticmethod
+    def patch_hit(token, hit_uuid, body):
+        decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        if body is None or body == '':
+            raise ValidationError('Request does not have a body')
+        
+        if(decoded.get('rank') == "hitman"):
+            hit = Hit.query.filter_by(hit_uuid=hit_uuid, hitman_uuid=decoded.get('hitman_uuid')).first()
+            if(not hit):
+                raise NotFoundError("No hit found with given hit_uuid or associated to your user")
+            validation = validate_patch_hit_by_hitman(body)
+            if(validation["error"]):
+                raise ValidationError(validation["error"])
+            else:
+                hit.status = body.get('status') or hit.status
+                return hit
+        elif(decoded.get('rank') == "manager"):
+            hit_hitman = db.session.query(Hit, Hitman).filter(Hit.hitman_uuid == Hitman.hitman_uuid).filter(Hitman.manager_uuid == decoded.get('hitman_uuid')).filter(Hit.hit_uuid == hit_uuid).first()
+            if(not hit_hitman):
+                raise NotFoundError("No hit found with given hit_uuid or to any of your asignees")
+            hit = hit_hitman[0]
+            print("hit",hit.to_json())
+            validation = validate_patch_hit_by_manager(body)
+            if(validation["error"]):
+                raise ValidationError(validation["error"])
+            else:
+                if(body.get('hitman_uuid')):
+                    hitman = Hitman.query.get(body.get('hitman_uuid'))
+                    if(not hitman):
+                        raise NotFoundError("No hitman was found with given hitman_uuid")
+                    hit.hitman_uuid = body.get('hitman_uuid') or hit.hitman_uuid
+                hit.status = body.get('status') or hit.status
+                return hit
+        elif(decoded.get('rank') == "god"):
+            #hit_hitman = db.session.query(Hit, Hitman).filter(Hit.hitman_uuid == Hitman.hitman_uuid).filter(Hit.hit_uuid == hit_uuid).first()
+            hit = Hit.query.get(hit_uuid)
+            if(not hit):
+                raise NotFoundError("No hit found with given hit_uuid")
+            print(hit.to_json())
+            validation = validate_patch_hit_by_manager(body)
+            if(validation["error"]):
+                raise ValidationError(validation["error"])
+            else:
+                if(body.get('hitman_uuid')):
+                    hitman = Hitman.query.get(body.get('hitman_uuid'))
+                    if(not hitman):
+                        raise NotFoundError("No hitman was found with given hitman_uuid")
+                    hit.hitman_uuid = body.get('hitman_uuid') or hit.hitman_uuid
+                hit.status = body.get('status') or hit.status
+                return hit
+
+
+
     def to_json(self):
         json_hitman = {
             'identifier': self.identifier,

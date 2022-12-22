@@ -4,4 +4,4 @@ from flask_cors import CORS
 api = Blueprint('api', __name__)
 CORS(api)
 
-from . import companies, hitmen, hits
+from . import hitmen, hits
