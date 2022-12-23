@@ -121,7 +121,9 @@ class Hitman(db.Model):
         else:
             hitman = Hitman.query.filter_by(email=body["email"]).first()
             if(hitman):
+                print("A")
                 print("hitman",hitman.to_json())
+                print("B")
                 check = body["password"]
                 check = check.encode('utf-8')
                 hashed = hitman.to_json().get("password").encode('utf-8')
