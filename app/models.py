@@ -103,9 +103,9 @@ class Hitman(db.Model):
         if body is None or body in [ "", {}]:
             raise ValidationError('Request does not have a body')
         validation = validate_post_hitman(body)
-        password_errors = password_check(body["password"])
         if(validation["error"]):
             raise ValidationError(validation["error"])
+        password_errors = password_check(body["password"])
         elif password_errors:
             raise ValidationError(",".join(password_errors))
         else:
