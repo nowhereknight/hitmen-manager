@@ -129,11 +129,13 @@ class Hitman(db.Model):
                 hashed = hitman.to_json().get("password").encode('utf-8')
                 print(check, hashed) 
                 if bcrypt.checkpw(check, hashed):
+                    print("Yei")
                     token = jwt.encode(
                         payload=hitman.to_json(),
                         key=SECRET_KEY,
                         algorithm="HS256"
                     )
+                    print("token", token)
                     return {"token":token, "hitman":hitman.to_json()}
                 else:
                     raise WrongPasswordError()
