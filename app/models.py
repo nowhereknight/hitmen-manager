@@ -99,6 +99,7 @@ class Hitman(db.Model):
 
     @staticmethod
     def create_from_json(body):
+        print(body, type(body))
         if body is None or body == '':
             raise ValidationError('Request does not have a body')
         validation = validate_post_hitman(body)
@@ -121,9 +122,6 @@ class Hitman(db.Model):
         else:
             hitman = Hitman.query.filter_by(email=body["email"]).first()
             if(hitman):
-                print("A")
-                print("hitman",hitman.to_json())
-                print("B")
                 check = body["password"]
                 check = check.encode('utf-8')
                 hashed = hitman.to_json().get("password").encode('utf-8')
@@ -139,8 +137,6 @@ class Hitman(db.Model):
                         token = token.decode()
                     except (UnicodeDecodeError, AttributeError):
                         pass
-
-                    print("token", token, type(token))
                     return {"token":token, "hitman":hitman.to_json()}
                 else:
                     raise WrongPasswordError()
