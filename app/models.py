@@ -30,7 +30,7 @@ class Company(db.Model):
     
     @staticmethod
     def create_from_json(body):
-        if body is None or body == '':
+        if body is None or body in [ "", {}]:
             raise ValidationError('Request does not have a body')
         validation = validate_post_company(body)
         if(validation["error"]):
@@ -42,7 +42,7 @@ class Company(db.Model):
     
 
     def update_from_json(self, body):
-        if body is None or body == '':
+        if body is None or body in [ "", {}]:
             raise ValidationError('Request does not have a body')
         validation = validate_put_company(body)
         if(validation["error"]):
@@ -100,7 +100,7 @@ class Hitman(db.Model):
     @staticmethod
     def create_from_json(body):
         print(body, type(body))
-        if body is None or body == '':
+        if body is None or body in [ "", {}]:
             raise ValidationError('Request does not have a body')
         validation = validate_post_hitman(body)
         password_errors = password_check(body["password"])
@@ -114,7 +114,7 @@ class Hitman(db.Model):
     
     @staticmethod
     def login(body):
-        if body is None or body == '':
+        if body is None or body in [ "", {}]:
             raise ValidationError('Request does not have a body')
         validation = validate_login(body)
         if(validation["error"]):
@@ -193,7 +193,7 @@ class Hitman(db.Model):
         decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
         if(decoded.get('rank') != "god"):
             raise ForbiddenError()
-        if body is None or body == '':
+        if body is None or body in [ "", {}]:
             raise ValidationError('Request does not have a body')
         validation = validate_patch_hitman(body)
         if(validation["error"]):
@@ -334,7 +334,7 @@ class Hit(db.Model):
         print(decoded)
         ### TO DO: Validar que los managers solo le puedan crear a sus lacallos
         if(decoded.get('rank') in ['manager', 'god']):
-            if body is None or body == '':
+            if body is None or body in [ "", {}]:
                 raise ValidationError('Request does not have a body')
             validation = validate_create_hit(body)
             if(validation["error"]):
@@ -353,7 +353,7 @@ class Hit(db.Model):
     @staticmethod
     def patch_hit(token, hit_uuid, body):
         decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        if body is None or body == '':
+        if body is None or body in [ "", {}]:
             raise ValidationError('Request does not have a body')
         
         if(decoded.get('rank') == "hitman"):

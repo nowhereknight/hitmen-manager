@@ -23,6 +23,7 @@ def register():
     except exc.IntegrityError as ie:
         return conflict(str(ie))
     except Exception as e:
+        print(e)
         if("400" in str(e)):
             return bad_request("Invalid POST request. Please remember to include the body")
         return system_error(str(e))
