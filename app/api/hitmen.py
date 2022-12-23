@@ -44,6 +44,7 @@ def login():
     except WrongPasswordError as wp:
         return bad_request("Wrong password")
     except Exception as e:
+        print(e)
         if("400" in str(e)):
             return bad_request("Invalid POST request. Please remember to include the body")
         return system_error(str(e))
