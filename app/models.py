@@ -5,7 +5,7 @@ import bcrypt
 import jwt
 from flask import current_app, request, url_for
 from . import db
-from .validators import validate_post_hitman, validate_login, validate_create_hit, validate_patch_hit_by_manager, validate_patch_hit_by_hitman
+from .validators import validate_post_hitman, validate_login, validate_create_hit, validate_patch_hit_by_manager, validate_patch_hit_by_hitman, validate_patch_hitman
 from .exceptions import ValidationError, NotFoundError, WrongPasswordError, NotAllowedError, ForbiddenError, InvalidChangeError
 from .utils import password_check
 
