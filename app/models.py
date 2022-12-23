@@ -231,7 +231,6 @@ class Hitman(db.Model):
             'name': self.name,
             'lastname_1': self.lastname_1,
             'lastname_2': self.lastname_2,
-            'password': self.password,
             'email': self.email,
             'status': self.status,
             'rank': self.rank,
