@@ -106,7 +106,7 @@ class Hitman(db.Model):
         if(validation["error"]):
             raise ValidationError(validation["error"])
         password_errors = password_check(body["password"])
-        elif password_errors:
+        if password_errors:
             raise ValidationError(",".join(password_errors))
         else:
             return Hitman(body)
