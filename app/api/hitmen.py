@@ -34,6 +34,7 @@ def login():
     try:
         print("Login info", request.get_json())
         response = Hitman.login(request.json)
+        print("response", response)
         return success(response, 200)
     except ValidationError as ve:
         return bad_request(str(ve))

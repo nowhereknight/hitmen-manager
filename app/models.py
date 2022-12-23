@@ -136,7 +136,7 @@ class Hitman(db.Model):
                         algorithm="HS256"
                     )
                     print("token", token)
-                    return {"token":token, "hitman":hitman.to_json()}
+                    return {"token":str(token), "hitman":hitman.to_json()}
                 else:
                     raise WrongPasswordError()
             raise NotFoundError()
