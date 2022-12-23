@@ -135,8 +135,13 @@ class Hitman(db.Model):
                         key=SECRET_KEY,
                         algorithm="HS256"
                     )
-                    print("token", token)
-                    return {"token":str(token), "hitman":hitman.to_json()}
+                    try:
+                        token = token.decode()
+                    except (UnicodeDecodeError, AttributeError):
+                        pass
+
+                    print("token", token, type(token))
+                    return {"token":token, "hitman":hitman.to_json()}
                 else:
                     raise WrongPasswordError()
             raise NotFoundError()
